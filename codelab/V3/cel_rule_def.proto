@@ -1,0 +1,33 @@
+// codelab/cel_rule_def.proto
+syntax = "proto3";
+
+// 定义一个包名，以防止与其他 .proto 文件中的消息名冲突
+package codelab.protobuf;
+
+// 1. 定义单条规则的消息
+message CelRuleMessage {
+  // 规则名 (字段编号 1)
+  string rule_name = 1;
+
+  // 规则的 CEL 表达式字符串 (字段编号 2)
+  string expression = 2;
+
+  // 规则的版本号 (字段编号 3)
+  int32 version = 3;
+
+  // (你未来还可以添加更多字段，比如：
+  // string description = 4;
+  // bool enabled = 5;
+  // ...)
+}
+
+// 2. （推荐）定义一个 "规则集"，它可以包含多条规则
+// 这对于持久化或网络传输特别有用
+message RuleSetMessage {
+  // 规则集本身的全局版本号
+  int32 version = 1;
+
+  // 使用 map 来存储 "规则名" -> "规则详情" 的映射
+  // map<key_type, value_type> field_name = field_number;
+  map<string, CelRuleMessage> rules = 2;
+}
