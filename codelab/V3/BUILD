@@ -26,6 +26,7 @@ exports_files(
     srcs = glob([
         "exercise*.h",
         "exercise*_test.cc",
+        "USAGE_GUIDE.md",
     ]),
     visibility = ["//codelab/solutions:__pkg__"],
 )
@@ -216,24 +217,51 @@ cc_binary(
     ],
 )
 
-# 1. 为 CelRule 创建一个库 (新添加)
+# 1. 为 CelRule 创建一个库 (更新)
 cc_library(
     name = "cel_rule",
     hdrs = ["CelRule.h"],
     # C++17 是为下一个练习 (std::any) 准备，但现在不是必需的
     copts = ["-std=c++17"],
+    deps = [
+        # (新) CelRule.h 现在包含了 "eval/public/cel_expression.h"
+        "//eval/public:cel_expression",
+    ],
 )
 
-# 2. 更新 rule_manager 库
+# 2. 更新 rule_manager 库 (更新)
 cc_library(
     name = "rule_manager",
     srcs = ["RuleManager.cc"],
     hdrs = ["RuleManager.h"],
     copts = ["-std=c++17"],
     deps = [
-        # 添加对 cel_rule 库的依赖
+        # 添加对 cel_rule 库的依赖 (已有)
         ":cel_rule",
         "@com_google_absl//absl/strings",
+
+        # (新) 为 RuleManager.cc 添加 CEL 编译器和运行时依赖
+        "@com_google_absl//absl/log:absl_log",
+        "@com_google_absl//absl/log:check",
+        ":cel_compiler",
+        "//compiler",
+        "//compiler:compiler_factory",
+        "//compiler:standard_library",
+        "//eval/public:builtin_func_registrar",
+        "//eval/public:cel_expr_builder_factory",
+        "//eval/public:cel_expression",
+        "//eval/public:cel_options",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_cel_spec//proto/cel/expr:checked_cc_proto",
+        "//eval/public:activation",
+        "//eval/public:cel_value",
+        "@com_google_protobuf//:protobuf",
+        "//common:decl",
+        "//common:type",
+        "//eval/public:activation_bind_helper",
+        "@com_google_googleapis//google/rpc/context:attribute_context_cc_proto",
+    
     ],
 )
 
@@ -294,6 +322,7 @@ cc_proto_library(
     deps = [":cel_rule_def_proto"],
 )
 
+
 # 3. 编译你的 proto_test_example.cc
 cc_binary(
     name = "proto_test_example",
@@ -305,4 +334,66 @@ cc_binary(
         # 依赖于 protobuf 的核心 C++ 运行时库
         "@com_google_protobuf//:protobuf",
     ],
+)
+
+# --- (新添加) 验证 RuleManager 编译功能的测试 ---
+cc_test(
+    name = "rule_manager_test",
+    srcs = ["rule_manager_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [
+        # 依赖于我们正在测试的 :rule_manager 库
+        ":rule_manager",
+
+        # 依赖于 cel-cpp 的标准测试库
+        "//internal:testing",
+    ],
+)
+
+# ... (在 BUILD 文件末尾) ...
+
+# --- (新添加) 验证 RuleManager 执行引擎功能的测试 ---
+cc_test(
+    name = "rule_engine_test",
+    srcs = ["rule_engine_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [
+        # 依赖于我们正在测试的 :rule_manager 库
+        ":rule_manager",
+
+        # 依赖于 cel-cpp 的标准测试库
+        "//internal:testing",
+        
+        # (新) 依赖于评估相关的 matchers
+        "//eval/public/testing:matchers",
+        "@com_google_absl//absl/status:status_matchers",
+    ],
+)
+
+# ... (在 BUILD 文件末尾) ...
+
+# --- (新添加) 任务三：端到端演示程序 ---
+cc_binary(
+    name = "rule_engine_demo",
+    srcs = ["rule_engine_demo.cc"], # <-- 确保这个文件名与您的文件匹配
+    copts = ["-std=c++17"],
+    deps = [
+        # 依赖于我们构建的规则管理器
+        ":rule_manager",
+
+        # 依赖于 Protobuf 上下文
+        "@com_google_googleapis//google/rpc/context:attribute_context_cc_proto",
+        "@com_google_absl//absl/status",
+        "//eval/public:cel_value",
+        
+        # (修正点) 添加此依赖，并修复语法
+        "@com_google_protobuf//:struct_cc_proto",
+    ],
+)
+
+# --- 创建一个静态库目标 ---
+alias(
+    name = "rule_engine_lib",
+    actual = ":rule_manager",
+    visibility = ["//visibility:public"],
 )
