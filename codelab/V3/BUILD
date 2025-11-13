@@ -391,9 +391,4 @@ cc_binary(
     ],
 )
 
-# --- 创建一个静态库目标 ---
-alias(
-    name = "rule_engine_lib",
-    actual = ":rule_manager",
-    visibility = ["//visibility:public"],
-)
+
